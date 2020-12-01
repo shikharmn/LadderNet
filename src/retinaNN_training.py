@@ -82,6 +82,7 @@ criterion = LossMulti(jaccard_weight=0)
 optimizer = optim.Adam(net.parameters(),lr=lr_value[0])
 
 #============ Load the data and divided in patches
+
 patches_imgs_train, patches_masks_train = get_data_training(
     DRIVE_train_imgs_original = path_data + config.get('data paths', 'train_imgs_original'),
     DRIVE_train_groudTruth = path_data + config.get('data paths', 'train_groundTruth'),  #masks
@@ -91,12 +92,28 @@ patches_imgs_train, patches_masks_train = get_data_training(
     inside_FOV = config.getboolean('training settings', 'inside_FOV') #select the patches only inside the FOV  (default == True)
 )
 
+val_ind = random.sample(range(patches_masks_train.shape[0]),int(np.floor(val_portion*patches_masks_train.shape[0])))
+train_ind =  set(range(patches_masks_train.shape[0])) - set(val_ind)
+train_ind = list(train_ind)
+
+#Save the dataset to drive to avoid RAM overload and clear RAM whenever possible
+np.save('train_imgs', patches_imgs_train[train_ind,...])
+np.save('val_imgs', patches_imgs_train[val_ind,...])
+patches_imgs_train = None
+
+np.save('train_masks', patches_masks_train[train_ind,...])
+np.save('val_masks', patches_masks_train[val_ind,...])
+patches_masks_train = None
+
+
+
 class TrainDataset(Dataset):
     """Endovis 2018 dataset."""
 
-    def __init__(self, patches_imgs,patches_masks_train):
-        self.imgs = patches_imgs
-        self.masks = patches_masks_train
+    def __init__(self, mode):
+
+        self.imgs = np.load(mode + '_imgs.npy')
+        self.masks = np.load(mode+'_masks.npy')
 
     def __len__(self):
         return self.imgs.shape[0]
@@ -106,23 +123,16 @@ class TrainDataset(Dataset):
         tmp = np.squeeze(tmp,0)
         return torch.from_numpy(self.imgs[idx,...]).float(), torch.from_numpy(tmp).long()
 
-val_ind = random.sample(range(patches_masks_train.shape[0]),int(np.floor(val_portion*patches_masks_train.shape[0])))
+# Create the dataloaders for training and validation
 
-train_ind =  set(range(patches_masks_train.shape[0])) - set(val_ind)
-train_ind = list(train_ind)
+train_set = TrainDataset('train')
+train_loader = DataLoader(train_set, batch_size=batch_size, shuffle=True)
 
-train_set = TrainDataset(patches_imgs_train[train_ind,...],patches_masks_train[train_ind,...])
-train_loader = DataLoader(train_set, batch_size=batch_size,
-                          shuffle=True, num_workers=4)
-
-val_set = TrainDataset(patches_imgs_train[val_ind,...],patches_masks_train[val_ind,...])
-val_loader = DataLoader(val_set, batch_size=batch_size,
-                          shuffle=True, num_workers=4)
+val_set = TrainDataset('val')
+val_loader = DataLoader(val_set, batch_size=batch_size, shuffle=True)
 
 #========= Save a sample of what you're feeding to the neural network ==========
-N_sample = min(patches_imgs_train.shape[0],40)
-visualize(group_images(patches_imgs_train[0:N_sample,:,:,:],5),'../'+name_experiment+'/'+"sample_input_imgs")#.show()
-visualize(group_images(patches_masks_train[0:N_sample,:,:,:],5),'../'+name_experiment+'/'+"sample_input_masks")#.show()
+N_sample = 40
 
 best_loss = np.Inf
 

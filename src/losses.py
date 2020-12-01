@@ -3,7 +3,7 @@ import numpy as np
 import torch.nn as nn
 
 def cuda(x):
-    return x.cuda(async=True) if torch.cuda.is_available() else x
+    return x.to('cuda:0') if torch.cuda.is_available() else x
 
 
 class LossMulti:
