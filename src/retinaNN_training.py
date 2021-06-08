@@ -52,6 +52,7 @@ if not os.path.exists('./logs'):
     os.mkdir('logs')
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
+print(device)
 
 start_epoch = 0  # start from epoch 0 or last checkpoint epoch
 total_epoch = 200
@@ -59,7 +60,7 @@ total_epoch = 200
 val_portion = 0.1
 
 lr_epoch = np.array([150,total_epoch])
-lr_value= np.array([0.001,0.0001])
+lr_value= np.array([0.001,0.0001])/6
 
 layers = 4
 filters = 10
@@ -71,7 +72,7 @@ print("Toral number of parameters: "+str(count_parameters(net)))
 
 check_path = 'LadderNetv65_layer_%d_filter_%d.pt7'% (layers,filters) #'UNet16.pt7'#'UNet_Resnet101.pt7'
 
-resume = False
+resume = True
 
 criterion = LossMulti(jaccard_weight=0)
 #criterion = CrossEntropy2d()
