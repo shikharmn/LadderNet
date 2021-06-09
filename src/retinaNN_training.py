@@ -51,7 +51,7 @@ batch_size = int(config.get('training settings', 'batch_size'))
 if not os.path.exists('./logs'):
     os.mkdir('logs')
 
-device = 'cuda' if torch.cuda.is_available() else 'cpu'
+device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
 print(device)
 
 start_epoch = 0  # start from epoch 0 or last checkpoint epoch
@@ -72,7 +72,7 @@ print("Toral number of parameters: "+str(count_parameters(net)))
 
 check_path = 'LadderNetv65_layer_%d_filter_%d.pt7'% (layers,filters) #'UNet16.pt7'#'UNet_Resnet101.pt7'
 
-resume = True
+resume = False
 
 criterion = LossMulti(jaccard_weight=0)
 #criterion = CrossEntropy2d()
@@ -145,7 +145,7 @@ for l in range(len(lr_epoch)):
     else:
         lr_schedule[lr_epoch[l-1]:lr_epoch[l]] = lr_value[l]
 
-if device == 'cuda':
+if device != 'cpu':
     net.cuda()
     net = torch.nn.DataParallel(net, device_ids=range(torch.cuda.device_count()))
     cudnn.benchmark = True
@@ -158,6 +158,8 @@ if resume:
     start_epoch = checkpoint['epoch']
 
 def train(epoch):
+
+    torch.cuda.empty_cache()
     print('\nEpoch: %d' % epoch)
     net.train()
     train_loss = 0
