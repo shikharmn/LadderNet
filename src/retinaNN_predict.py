@@ -163,6 +163,8 @@ test_loader = DataLoader(test_set, batch_size=batch_size,
                           shuffle=False, num_workers=4)
 
 preds = []
+net.eval()
+
 for batch_idx, inputs in enumerate((test_loader)):
     inputs = inputs.to(device)
     outputs = net(inputs)
