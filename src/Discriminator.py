@@ -24,7 +24,8 @@ class BasicBlock(nn.Module):
 
         self.conv1 = conv3x3(planes, planes, stride)
         self.bn1 = nn.BatchNorm2d(planes)
-        self.relu = nn.ReLU(inplace=True)
+        self.relu = nn.LeakyReLU(0.2,inplace=True)
+        self.lrelu = nn.LeakyReLU(0.2)
         # self.conv2 = conv3x3(planes, planes)
         # self.bn2 = nn.BatchNorm2d(planes)
         self.downsample = downsample
@@ -34,7 +35,7 @@ class BasicBlock(nn.Module):
     def forward(self, x):
         if self.inplanes != self.planes:
             x = self.conv0(x)
-            x = F.relu(x)
+            x = self.lrelu(x)
 
         out = self.conv1(x)
         out = self.bn1(out)
@@ -47,7 +48,7 @@ class BasicBlock(nn.Module):
 
         out2 = out1 + x
 
-        return F.relu(out2)
+        return self.lrelu(out2)
 
 
 class Discriminator(nn.Module):
@@ -57,6 +58,8 @@ class Discriminator(nn.Module):
         self.planes = planes
         self.layers = layers
         self.kernel = kernel
+        self.relu = nn.LeakyReLU(0.2,inplace=True)
+        self.lrelu = nn.LeakyReLU(0.2)
 
         self.padding = int((kernel - 1) / 2)
         self.inconv = nn.Conv2d(in_channels=inplanes, out_channels=planes,
@@ -83,21 +86,21 @@ class Discriminator(nn.Module):
 
     def forward(self, x):
         out = self.inconv(x)
-        out = F.relu(out)
+        out = self.lrelu(out)
         down_out = []
         # down branch
         for i in range(0, self.layers):
             out = self.down_module_list[i](out)
             down_out.append(out)
             out = self.down_conv_list[i](out)
-            out = F.relu(out)
+            out = self.lrelu(out)
 
         # bottom branch
         out = self.bottom(out)
-        out = F.relu(out)
+        out = self.lrelu(out)
         out = self.penult_conv(out)
-        out = F.relu(out).reshape((-1, self.planes * (2 ** (self.layers - 1))))
+        out = self.lrelu(out).reshape((-1, self.planes * (2 ** (self.layers - 1))))
         out = self.final_fc(out)
-        out = F.relu(out)
+        out = self.lrelu(out)
 
         return out
